@@ -1,4 +1,56 @@
+import { useEffect, useState } from 'react'
+
+type XiaodouliLatest = {
+  version: string
+  url: string
+  releaseDate?: string
+  sha512?: string
+  platform?: string
+  fileName?: string
+}
+
+type ObsFile = { url: string; fileName: string; version: string }
+type ObsLatest = {
+  version: string
+  files: {
+    windows: ObsFile | null
+    macosApple: ObsFile | null
+    macosIntel: ObsFile | null
+    ubuntu: ObsFile | null
+  }
+}
+
 function DownloadsPage() {
+  const [xdLatest, setXdLatest] = useState<XiaodouliLatest | null>(null)
+  const [obsLatest, setObsLatest] = useState<ObsLatest | null>(null)
+  // no explicit loading state needed; buttons show inline loading text
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const [xdRes, obsRes] = await Promise.all([
+          fetch('/api/xiaodouli/latest-windows.json'),
+          fetch('/api/obs/latest')
+        ])
+        if (xdRes.ok) {
+          const data = await xdRes.json()
+          if (!cancelled) setXdLatest(data)
+        }
+        if (obsRes.ok) {
+          const data = await obsRes.json()
+          if (!cancelled) setObsLatest(data)
+        }
+      } catch (e) {
+        // ignore, show fallbacks
+      } finally {
+        // no-op
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [])
+
   return (
     <div className="py-12">
       <div className="container mx-auto px-4">
@@ -21,20 +73,33 @@ function DownloadsPage() {
                   </p>
                 </div>
                 <div className="mt-4 md:mt-0">
-                  <a 
-                    href="https://xiaodouliupdates.wzyclouds.dpdns.org/小斗笠直播助手-Setup-2.0.0.exe" 
-                    className="bg-primary-600 text-white px-6 py-3 rounded-md hover:bg-primary-700 transition-colors"
-                  >
-                    立即下载
-                  </a>
+                  {xdLatest?.url ? (
+                    <a 
+                      href={xdLatest.url}
+                      className="bg-primary-600 text-white px-6 py-3 rounded-md hover:bg-primary-700 transition-colors"
+                    >
+                      立即下载
+                    </a>
+                  ) : (
+                    <button 
+                      className="bg-gray-300 text-gray-700 px-6 py-3 rounded-md cursor-not-allowed"
+                      disabled
+                    >
+                      加载中...
+                    </button>
+                  )}
                 </div>
               </div>
               
               <div className="flex flex-wrap gap-4 mb-4 text-sm">
-                <span className="bg-gray-100 px-4 py-2 rounded-full">版本: 2.0.0</span>
-                <span className="bg-gray-100 px-4 py-2 rounded-full">大小: 200.13 MB</span>
-                <span className="bg-gray-100 px-4 py-2 rounded-full">系统: Windows</span>
-                <span className="bg-gray-100 px-4 py-2 rounded-full">发布时间: 2025/6/10</span>
+                <span className="bg-gray-100 px-4 py-2 rounded-full">版本: {xdLatest?.version || '...'}</span>
+                <span className="bg-gray-100 px-4 py-2 rounded-full">系统: {xdLatest?.platform || 'Windows'}</span>
+                {xdLatest?.releaseDate ? (
+                  <span className="bg-gray-100 px-4 py-2 rounded-full">发布时间: {new Date(xdLatest.releaseDate).toLocaleString()}</span>
+                ) : null}
+                {xdLatest?.fileName ? (
+                  <span className="bg-gray-100 px-4 py-2 rounded-full">文件: {xdLatest.fileName}</span>
+                ) : null}
               </div>
               
               <div>
@@ -63,34 +128,50 @@ function DownloadsPage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <a 
-                  className="p-4 border rounded hover:bg-gray-50 text-center transition-colors" 
-                  href="https://mirrors.tuna.tsinghua.edu.cn/github-release/obsproject/obs-studio/LatestRelease/OBS-Studio-31.0.3-Windows-Installer.exe"
-                >
-                  🪟 Windows 下载
-                </a>
-                <a 
-                  className="p-4 border rounded hover:bg-gray-50 text-center transition-colors" 
-                  href="https://mirrors.tuna.tsinghua.edu.cn/github-release/obsproject/obs-studio/LatestRelease/OBS-Studio-31.0.3-macOS-Apple.dmg"
-                >
-                  🍎 macOS (Apple) 下载
-                </a>
-                <a 
-                  className="p-4 border rounded hover:bg-gray-50 text-center transition-colors" 
-                  href="https://mirrors.tuna.tsinghua.edu.cn/github-release/obsproject/obs-studio/LatestRelease/OBS-Studio-31.0.3-macOS-Intel.dmg"
-                >
-                  🍎 macOS (Intel) 下载
-                </a>
-                <a 
-                  className="p-4 border rounded hover:bg-gray-50 text-center transition-colors" 
-                  href="https://mirrors.tuna.tsinghua.edu.cn/github-release/obsproject/obs-studio/LatestRelease/OBS-Studio-31.0.3-Ubuntu-24.04-x86_64.deb"
-                >
-                  🐧 Ubuntu/Linux 下载
-                </a>
+                {obsLatest?.files?.windows?.url ? (
+                  <a 
+                    className="p-4 border rounded hover:bg-gray-50 text-center transition-colors" 
+                    href={obsLatest.files.windows.url}
+                  >
+                    🪟 Windows 下载
+                  </a>
+                ) : (
+                  <div className="p-4 border rounded text-center text-gray-500">🪟 Windows 加载中...</div>
+                )}
+                {obsLatest?.files?.macosApple?.url ? (
+                  <a 
+                    className="p-4 border rounded hover:bg-gray-50 text-center transition-colors" 
+                    href={obsLatest.files.macosApple.url}
+                  >
+                    🍎 macOS (Apple) 下载
+                  </a>
+                ) : (
+                  <div className="p-4 border rounded text-center text-gray-500">🍎 macOS (Apple) 加载中...</div>
+                )}
+                {obsLatest?.files?.macosIntel?.url ? (
+                  <a 
+                    className="p-4 border rounded hover:bg-gray-50 text-center transition-colors" 
+                    href={obsLatest.files.macosIntel.url}
+                  >
+                    🍎 macOS (Intel) 下载
+                  </a>
+                ) : (
+                  <div className="p-4 border rounded text-center text-gray-500">🍎 macOS (Intel) 加载中...</div>
+                )}
+                {obsLatest?.files?.ubuntu?.url ? (
+                  <a 
+                    className="p-4 border rounded hover:bg-gray-50 text-center transition-colors" 
+                    href={obsLatest.files.ubuntu.url}
+                  >
+                    🐧 Ubuntu/Linux 下载
+                  </a>
+                ) : (
+                  <div className="p-4 border rounded text-center text-gray-500">🐧 Ubuntu/Linux 加载中...</div>
+                )}
               </div>
               
               <div className="mt-4 text-sm text-gray-600">
-                版本: 31.0.3 · 发布时间: 2025/3/28
+                版本: {obsLatest?.version || '...'}
               </div>
             </div>
           </div>

@@ -2,6 +2,16 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
+    // Helper to create a JSON response with CORS and cache headers
+    const jsonResponse = (data, { maxAge = 300, status = 200 } = {}) => {
+      const body = typeof data === 'string' ? data : JSON.stringify(data);
+      const resp = new Response(body, { status });
+      resp.headers.set('Content-Type', 'application/json; charset=utf-8');
+      resp.headers.set('Access-Control-Allow-Origin', '*');
+      if (maxAge > 0) resp.headers.set('Cache-Control', `public, max-age=${maxAge}`);
+      return resp;
+    };
+
     // Proxy and cache JSON API
     if (url.pathname === '/api/appdates.json') {
       const origin = 'https://xiaodouli.openclouds.dpdns.org/updates/appdates.json';
@@ -35,6 +45,98 @@ export default {
       out.headers.set('Access-Control-Allow-Origin', '*');
       ctx.waitUntil(caches.default.put(cacheKey, out.clone()));
       return out;
+    }
+
+    // Xiaodouli latest windows JSON proxy (dynamic, cached)
+    if (url.pathname === '/api/xiaodouli/latest-windows.json') {
+      const origin = 'https://xiaodouli.openclouds.dpdns.org/updates/latest-windows.json';
+      const cacheKey = new Request(url.toString(), request);
+      const cached = await caches.default.match(cacheKey);
+
+      try {
+        const res = await fetch(origin, { cf: { cacheTtl: 300, cacheEverything: true } });
+        if (!res.ok) throw new Error(`upstream ${res.status}`);
+        const data = await res.json();
+        const out = jsonResponse(data, { maxAge: 300 });
+        ctx.waitUntil(caches.default.put(cacheKey, out.clone()));
+        return out;
+      } catch (e) {
+        if (cached) return cached;
+        return jsonResponse({ error: 'failed_to_fetch_xiaodouli' }, { status: 502, maxAge: 0 });
+      }
+    }
+
+    // OBS latest links extractor from TUNA mirror index
+    if (url.pathname === '/api/obs/latest') {
+      const originBase = 'https://mirrors.tuna.tsinghua.edu.cn/github-release/obsproject/obs-studio/LatestRelease/';
+      const cacheKey = new Request(url.toString(), request);
+      const cached = await caches.default.match(cacheKey);
+
+      try {
+        const res = await fetch(originBase, { cf: { cacheTtl: 300, cacheEverything: true } });
+        if (!res.ok) throw new Error(`upstream ${res.status}`);
+        const html = await res.text();
+
+        // Extract file hrefs
+        const hrefs = Array.from(html.matchAll(/href=\"([^\"]+)\"/g)).map(m => m[1]);
+        // Normalize to absolute URLs
+        const fileUrls = hrefs
+          .filter(h => /OBS-Studio-\d+\.\d+\.\d+/.test(h))
+          .map(h => h.startsWith('http') ? h : originBase + h);
+
+        // Helper to pick latest by version for a given predicate
+        const parseVersion = (name) => {
+          const m = name.match(/OBS-Studio-(\d+\.\d+\.\d+)/);
+          return m ? m[1] : null;
+        };
+        const compareSemver = (a, b) => {
+          const pa = a.split('.').map(n => parseInt(n));
+          const pb = b.split('.').map(n => parseInt(n));
+          for (let i = 0; i < 3; i++) {
+            if (pa[i] !== pb[i]) return pa[i] - pb[i];
+          }
+          return 0;
+        };
+        const pickLatest = (predicate) => {
+          const candidates = fileUrls.filter(predicate).map(url => ({ url, name: decodeURIComponent(url.split('/').pop() || '') }));
+          if (candidates.length === 0) return null;
+          candidates.sort((a, b) => {
+            const va = parseVersion(a.name) || '0.0.0';
+            const vb = parseVersion(b.name) || '0.0.0';
+            return compareSemver(vb, va); // desc
+          });
+          const top = candidates[0];
+          return { url: top.url, fileName: top.name, version: parseVersion(top.name) };
+        };
+
+        const windows = pickLatest(u => /Windows-(x64-Installer\.exe|x64\.zip|arm64\.zip|arm64-PDBs\.zip|x64-PDBs\.zip)/.test(u));
+        const macApple = pickLatest(u => /macOS-Apple\.dmg/.test(u));
+        const macIntel = pickLatest(u => /macOS-Intel\.dmg/.test(u));
+        // Prefer Ubuntu 24.04 x86_64 .deb, else any .deb
+        let ubuntu = pickLatest(u => /Ubuntu-24\.04-x86_?64\.deb/.test(u));
+        if (!ubuntu) ubuntu = pickLatest(u => /\.(deb)$/.test(u) && /Ubuntu|noble|plucky|jammy|focal/.test(u));
+
+        // Determine overall version by taking max of available
+        const versions = [windows, macApple, macIntel, ubuntu].filter(Boolean).map(i => i.version);
+        const overall = versions.length ? versions.sort((a, b) => compareSemver(b, a))[0] : '';
+
+        const payload = {
+          version: overall,
+          files: {
+            windows: windows || null,
+            macosApple: macApple || null,
+            macosIntel: macIntel || null,
+            ubuntu: ubuntu || null
+          }
+        };
+
+        const out = jsonResponse(payload, { maxAge: 300 });
+        ctx.waitUntil(caches.default.put(cacheKey, out.clone()));
+        return out;
+      } catch (e) {
+        if (cached) return cached;
+        return jsonResponse({ error: 'failed_to_fetch_obs' }, { status: 502, maxAge: 0 });
+      }
     }
 
     // Serve assets from ASSETS binding
