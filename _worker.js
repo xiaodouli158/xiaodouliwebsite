@@ -40,10 +40,8 @@ export default {
       if (url.pathname === '/' || url.pathname === '') {
         url.pathname = '/pages/index.html';
       }
-      // Icon alias: /assets/icons/* -> /client/public/icons/*
-      if (url.pathname.startsWith('/assets/icons/')) {
-        url.pathname = url.pathname.replace('/assets/icons/', '/client/public/icons/');
-      }
+      // Keep assets paths as they are - no rewriting needed
+      // Assets are served directly from the assets directory
       const assetRequest = new Request(url.toString(), request);
       const cacheKey = assetRequest;
       const cached = await caches.default.match(cacheKey);
