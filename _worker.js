@@ -82,43 +82,27 @@ export default {
         // Normalize to absolute URLs
         const fileUrls = hrefs
           .filter(h => /OBS-Studio-\d+\.\d+\.\d+/.test(h))
-          .map(h => h.startsWith('http') ? h : originBase + h);
+          .map(h => (h.startsWith('http') ? h : originBase + h));
 
-        // Helper to pick latest by version for a given predicate
-        const parseVersion = (name) => {
-          const m = name.match(/OBS-Studio-(\d+\.\d+\.\d+)/);
-          return m ? m[1] : null;
-        };
-        const compareSemver = (a, b) => {
-          const pa = a.split('.').map(n => parseInt(n));
-          const pb = b.split('.').map(n => parseInt(n));
-          for (let i = 0; i < 3; i++) {
-            if (pa[i] !== pb[i]) return pa[i] - pb[i];
-          }
-          return 0;
-        };
-        const pickLatest = (predicate) => {
-          const candidates = fileUrls.filter(predicate).map(url => ({ url, name: decodeURIComponent(url.split('/').pop() || '') }));
-          if (candidates.length === 0) return null;
-          candidates.sort((a, b) => {
-            const va = parseVersion(a.name) || '0.0.0';
-            const vb = parseVersion(b.name) || '0.0.0';
-            return compareSemver(vb, va); // desc
-          });
-          const top = candidates[0];
-          return { url: top.url, fileName: top.name, version: parseVersion(top.name) };
+        // Extract version once from any OBS file on this page (LatestRelease contains only the latest)
+        const firstName = decodeURIComponent((fileUrls[0] || '').split('/').pop() || '');
+        const versionMatch = firstName.match(/OBS-Studio-(\d+\.\d+\.\d+)/);
+        const overall = versionMatch ? versionMatch[1] : '';
+
+        // Pick the first match per platform
+        const pickFirst = (predicate) => {
+          const url = fileUrls.find(predicate);
+          if (!url) return null;
+          const name = decodeURIComponent(url.split('/').pop() || '');
+          return { url, fileName: name, version: overall };
         };
 
-        const windows = pickLatest(u => /Windows-(x64-Installer\.exe|x64\.zip|arm64\.zip|arm64-PDBs\.zip|x64-PDBs\.zip)/.test(u));
-        const macApple = pickLatest(u => /macOS-Apple\.dmg/.test(u));
-        const macIntel = pickLatest(u => /macOS-Intel\.dmg/.test(u));
+        const windows = pickFirst(u => /Windows-(x64-Installer\.exe|x64\.zip|arm64\.zip|arm64-PDBs\.zip|x64-PDBs\.zip)/.test(u));
+        const macApple = pickFirst(u => /macOS-Apple\.dmg/.test(u));
+        const macIntel = pickFirst(u => /macOS-Intel\.dmg/.test(u));
         // Prefer Ubuntu 24.04 x86_64 .deb, else any .deb
-        let ubuntu = pickLatest(u => /Ubuntu-24\.04-x86_?64\.deb/.test(u));
-        if (!ubuntu) ubuntu = pickLatest(u => /\.(deb)$/.test(u) && /Ubuntu|noble|plucky|jammy|focal/.test(u));
-
-        // Determine overall version by taking max of available
-        const versions = [windows, macApple, macIntel, ubuntu].filter(Boolean).map(i => i.version);
-        const overall = versions.length ? versions.sort((a, b) => compareSemver(b, a))[0] : '';
+        let ubuntu = pickFirst(u => /Ubuntu-24\.04-x86_?64\.deb/.test(u));
+        if (!ubuntu) ubuntu = pickFirst(u => /\.(deb)$/.test(u) && /Ubuntu|noble|plucky|jammy|focal/.test(u));
 
         const payload = {
           version: overall,
