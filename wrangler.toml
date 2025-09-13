@@ -10,14 +10,11 @@ routes = [
 [env.dev]
 # 用于开发环境
 
-# 静态资源配置 - 将你的静态文件上传为 Assets
-[[assets]]
-bucket = "./assets"
+# 静态资源配置 - 将你的静态文件作为 Assets 上传
+[assets]
+directory = "./"
 include = ["**/*"]
-
-[[assets]]
-bucket = "./pages"
-include = ["**/*"]
+exclude = ["node_modules/**", "*.log", ".git/**", "wrangler.toml", "package*.json"]
 
 # 如果你有自定义域名，取消下面的注释并修改
 # [env.production]
