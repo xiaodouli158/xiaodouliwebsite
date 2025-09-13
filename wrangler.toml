@@ -1,0 +1,30 @@
+name = "xiaodouli-static-site"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+routes = [
+  { pattern = "yourdomain.com/*", zone_name = "yourdomain.com" }
+]
+
+[env.dev]
+# 用于开发环境
+
+# 静态资源配置 - 将你的静态文件上传为 Assets
+[[assets]]
+bucket = "./assets"
+include = ["**/*"]
+
+[[assets]]
+bucket = "./pages"
+include = ["**/*"]
+
+# 如果你有自定义域名，取消下面的注释并修改
+# [env.production]
+# routes = [
+#   { pattern = "your-domain.com/*", zone_name = "your-domain.com" }
+# ]
+
+# 环境变量（如果需要的话）
+# [vars]
+# ENVIRONMENT = "production"

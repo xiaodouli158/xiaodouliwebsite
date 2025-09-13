@@ -1,27 +1,6 @@
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    // Route / to /pages/index.html
-    if (url.pathname === '/' || url.pathname === '') {
-      url.pathname = '/pages/index.html';
-      return fetch(new Request(url.toString(), request));
-    }
-    // Alias icons path to existing client/public/icons to avoid duplication
-    if (url.pathname.startsWith('/assets/icons/')) {
-      url.pathname = url.pathname.replace('/assets/icons/', '/client/public/icons/');
-      return fetch(new Request(url.toString(), request));
-    }
-    // Cache static assets aggressively
-    if (request.method === 'GET' && !url.pathname.startsWith('/api/')) {
-      return await caches.default.match(request) || await (async () => {
-        const res = await fetch(request);
-        const cacheRes = new Response(res.body, res);
-        cacheRes.headers.set('Cache-Control', 'public, max-age=3600');
-        ctx.waitUntil(caches.default.put(request, cacheRes.clone()));
-        return cacheRes;
-      })();
-    }
-
     // Proxy and cache JSON API
     if (url.pathname === '/api/appdates.json') {
       const origin = 'https://xiaodouli.openclouds.dpdns.org/updates/appdates.json';
@@ -54,7 +33,38 @@ export default {
       return out;
     }
 
-    return fetch(request);
+    // Serve static assets from ASSETS binding
+    if (request.method === 'GET') {
+      const originalUrl = new URL(url.toString());
+      // Rewrite root to pages/index.html
+      if (url.pathname === '/' || url.pathname === '') {
+        url.pathname = '/pages/index.html';
+      }
+      // Icon alias: /assets/icons/* -> /client/public/icons/*
+      if (url.pathname.startsWith('/assets/icons/')) {
+        url.pathname = url.pathname.replace('/assets/icons/', '/client/public/icons/');
+      }
+      const assetRequest = new Request(url.toString(), request);
+      const cacheKey = assetRequest;
+      const cached = await caches.default.match(cacheKey);
+      if (cached) return cached;
+      const res = await env.ASSETS.fetch(assetRequest);
+      // If the rewritten path 404s, try the original path once
+      if (res.status === 404 && (originalUrl.pathname === '/' || originalUrl.pathname === '')) {
+        return res;
+      }
+      const cacheable = res.status === 200 && !res.headers.get('Cache-Control');
+      const out = cacheable ? new Response(res.body, res) : res;
+      if (cacheable) {
+        const ct = out.headers.get('Content-Type') || '';
+        const isHtml = ct.includes('text/html');
+        out.headers.set('Cache-Control', isHtml ? 'public, max-age=60' : 'public, max-age=3600');
+        ctx.waitUntil(caches.default.put(cacheKey, out.clone()));
+      }
+      return out;
+    }
+
+    return new Response('Method Not Allowed', { status: 405 });
   }
 };
 
