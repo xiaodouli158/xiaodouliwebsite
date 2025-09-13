@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <base href="/">
+    <title>插件工具 - 小斗笠直播助手</title>
+    <link rel="icon" href="./assets/icons/icon-32x32.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: { extend: { colors: { primary: {50:'#f0f9ff',100:'#e0f2fe',200:'#bae6fd',300:'#7dd3fc',400:'#38bdf8',500:'#0ea5e9',600:'#0284c7',700:'#0369a1',800:'#075985',900:'#0c4a6e',950:'#082f49'}, secondary: {50:'#f5f3ff',100:'#ede9fe',200:'#ddd6fe',300:'#c4b5fd',400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',800:'#5b21b6',900:'#4c1d95',950:'#2e1065'} } } }
+      }
+    </script>
+    <script defer src="./assets/js/app-data.js"></script>
+    <script defer src="./assets/js/video-modal.js"></script>
+    <script defer src="./assets/js/ui.js"></script>
+  </head>
+  <body class="bg-gray-50 text-gray-900">
+    <div class="flex min-h-screen flex-col">
+      <nav class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-3">
+          <div class="flex items-center justify-between">
+            <a href="/pages/index.html" class="flex items-center space-x-3">
+              <img src="./assets/icons/icon-32x32.ico" alt="小斗笠直播工具" class="h-8 w-8">
+              <span class="text-xl font-bold">小斗笠直播助手</span>
+            </a>
+            <div class="hidden md:flex space-x-8 text-sm">
+              <a href="/pages/index.html" class="text-gray-600 hover:text-primary-600">首页</a>
+              <a href="/pages/downloads.html" class="text-gray-600 hover:text-primary-600">下载软件</a>
+              <a href="/pages/plugins.html" class="text-primary-600 font-medium">插件工具</a>
+              <a href="/pages/tutorials.html" class="text-gray-600 hover:text-primary-600">使用教程</a>
+              <a href="/pages/devices.html" class="text-gray-600 hover:text-primary-600">设备推荐</a>
+              <a href="/pages/debug.html" class="text-gray-600 hover:text-primary-600">技术支持</a>
+              <a href="/pages/contact.html" class="text-gray-600 hover:text-primary-600">联系我们</a>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main class="flex-grow">
+        <div class="py-12">
+          <div class="container mx-auto px-4">
+            <div class="text-center mb-10">
+              <h1 class="text-4xl font-bold mb-3">插件工具</h1>
+              <p class="text-gray-600">从服务器获取插件/工具列表，以卡片封面展示，点击播放演示视频。</p>
+            </div>
+
+            <div id="plugins-grid" class="min-h-[200px]"></div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="bg-gray-100 py-8">
+        <div class="container mx-auto px-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <a href="/pages/index.html" class="mb-4 flex items-center space-x-3">
+                <img src="./assets/icons/icon-32x32.ico" alt="小斗笠直播工具" class="h-8 w-8">
+                <span class="text-xl font-bold">小斗笠直播助手</span>
+              </a>
+              <p class="text-sm text-gray-600">您的终极直播伴侣。通过我们的工具和资源提升您的直播体验。</p>
+            </div>
+            <div>
+              <h3 class="font-semibold mb-4">快速链接</h3>
+              <ul class="space-y-2 text-sm">
+                <li><a href="/pages/index.html" class="text-gray-600 hover:text-primary-600">首页</a></li>
+                <li><a href="/pages/downloads.html" class="text-gray-600 hover:text-primary-600">下载软件</a></li>
+                <li><a href="/pages/plugins.html" class="text-gray-600 hover:text-primary-600">插件工具</a></li>
+                <li><a href="/pages/tutorials.html" class="text-gray-600 hover:text-primary-600">使用教程</a></li>
+                <li><a href="/pages/devices.html" class="text-gray-600 hover:text-primary-600">设备推荐</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="font-semibold mb-4">支持</h3>
+              <ul class="space-y-2 text-sm">
+                <li><a href="/pages/debug.html" class="text-gray-600 hover:text-primary-600">技术支持</a></li>
+                <li><a href="/pages/contact.html" class="text-gray-600 hover:text-primary-600">联系我们</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="font-semibold mb-4">关注我们</h3>
+              <div class="flex space-x-4 text-gray-600">
+                <span>Facebook</span><span>Twitter</span><span>Instagram</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-8 border-t border-gray-200 pt-6 text-center text-sm text-gray-600">© 2025 小斗笠直播助手. 保留所有权利.</div>
+        </div>
+      </footer>
+    </div>
+    <script>
+      window.addEventListener('DOMContentLoaded', async () => {
+        const container = document.getElementById('plugins-grid');
+        try {
+          const data = await window.AppData.getData();
+          const list = window.AppData.selectSection(data, ['plugins', 'tools', '插件', '工具']);
+          window.UI.renderCardGrid(container, list, { size: 'medium' });
+        } catch (e) {
+          container.innerHTML = '<div class="text-center text-gray-500">加载失败，请稍后重试</div>';
+        }
+      });
+    </script>
+  </body>
+  </html>
+
+
+
