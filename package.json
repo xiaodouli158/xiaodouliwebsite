@@ -1,18 +1,33 @@
 {
-  "name": "xiaodouli-static-site",
+  "name": "streamassist",
   "version": "1.0.0",
-  "description": "小斗笠直播工具静态网站",
+  "description": "小斗笠直播工具官网",
+  "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "deploy-staging": "wrangler deploy --env dev",
-    "tail": "wrangler tail"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "worker:dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy-staging": "npm run build && wrangler deploy --env dev"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.6.0"
   },
   "devDependencies": {
+    "@types/react": "^18.3.21",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5",
     "@cloudflare/workers-types": "^4.20240919.0",
     "wrangler": "^4.36.0"
   },
-  "main": "_worker.js",
-  "keywords": ["cloudflare", "workers", "static-site"],
+  "keywords": ["react", "typescript", "vite", "cloudflare", "streaming"],
   "author": "小斗笠直播工具"
 }
