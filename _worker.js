@@ -68,11 +68,11 @@ export default {
 
     // OBS latest links extractor with multiple mirror fallbacks
     if (url.pathname === '/api/obs/latest') {
-      const mirrorBases = [
-        'https://mirrors.bfsu.edu.cn/github-release/obsproject/obs-studio/LatestRelease/',
+      const mirrorBases = [        
         'https://mirrors.tuna.tsinghua.edu.cn/github-release/obsproject/obs-studio/LatestRelease/',
-        'https://mirror.nju.edu.cn/github-release/obsproject/obs-studio/LatestRelease/',
-        'https://mirror.nyist.edu.cn/github-release/obsproject/obs-studio/LatestRelease/'
+        'https://mirror.nju.edu.cn/github-release/obsproject/obs-studio/LatestRelease/',        
+        'https://mirror.nyist.edu.cn/github-release/obsproject/obs-studio/LatestRelease/',
+        'https://mirrors.bfsu.edu.cn/github-release/obsproject/obs-studio/LatestRelease/'
       ];
       const cacheKey = new Request(url.toString(), request);
       const cached = await caches.default.match(cacheKey);
@@ -116,7 +116,7 @@ export default {
           return { url, fileName: name, version: overall };
         };
 
-        const windows = pickFirst(u => /Windows-(x64-Installer\.exe|x64\.zip|arm64\.zip|arm64-PDBs\.zip|x64-PDBs\.zip)/.test(u));
+        const windows = pickFirst(u => /indows/i.test(u) && /\.exe$/i.test(u));
         const macApple = pickFirst(u => /macOS-Apple\.dmg/.test(u));
         const macIntel = pickFirst(u => /macOS-Intel\.dmg/.test(u));
         // Prefer Ubuntu 24.04 x86_64 .deb, else any .deb
