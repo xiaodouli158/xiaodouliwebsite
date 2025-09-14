@@ -66,16 +66,35 @@ export default {
       }
     }
 
-    // OBS latest links extractor from TUNA mirror index
+    // OBS latest links extractor with multiple mirror fallbacks
     if (url.pathname === '/api/obs/latest') {
-      const originBase = 'https://mirrors.tuna.tsinghua.edu.cn/github-release/obsproject/obs-studio/LatestRelease/';
+      const mirrorBases = [
+        'https://mirrors.bfsu.edu.cn/github-release/obsproject/obs-studio/LatestRelease/',
+        'https://mirrors.tuna.tsinghua.edu.cn/github-release/obsproject/obs-studio/LatestRelease/',
+        'https://mirror.nju.edu.cn/github-release/obsproject/obs-studio/LatestRelease/',
+        'https://mirror.nyist.edu.cn/github-release/obsproject/obs-studio/LatestRelease/'
+      ];
       const cacheKey = new Request(url.toString(), request);
       const cached = await caches.default.match(cacheKey);
 
       try {
-        const res = await fetch(originBase, { cf: { cacheTtl: 300, cacheEverything: true } });
-        if (!res.ok) throw new Error(`upstream ${res.status}`);
-        const html = await res.text();
+        let originBase = '';
+        let html = '';
+
+        for (const base of mirrorBases) {
+          try {
+            const res = await fetch(base, { cf: { cacheTtl: 300, cacheEverything: true } });
+            if (res.ok) {
+              originBase = base;
+              html = await res.text();
+              break;
+            }
+          } catch (_) {
+            // try next mirror
+          }
+        }
+
+        if (!originBase) throw new Error('all_mirrors_failed');
 
         // Extract file hrefs
         const hrefs = Array.from(html.matchAll(/href=\"([^\"]+)\"/g)).map(m => m[1]);
