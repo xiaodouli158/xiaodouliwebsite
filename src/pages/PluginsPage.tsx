@@ -1,12 +1,21 @@
 import { useAppData } from '../hooks/useAppData'
+import { useState } from 'react'
+import VideoModal from '../components/VideoModal'
 
 function PluginsPage() {
   const { data, loading, error } = useAppData()
   const plugins = data?.plugins || []
+  const [isVideoOpen, setIsVideoOpen] = useState(false)
+  const [currentVideoUrl, setCurrentVideoUrl] = useState<string | undefined>(undefined)
+  const [currentPlatform, setCurrentPlatform] = useState<string | undefined>(undefined)
+  const [currentTitle, setCurrentTitle] = useState<string | undefined>(undefined)
 
   const handleCardClick = (item: typeof plugins[0]) => {
     if (item.workType === 'Video' && item.demoVideo) {
-      window.open(item.demoVideo, '_blank', 'noopener,noreferrer')
+      setCurrentVideoUrl(item.demoVideo)
+      setCurrentPlatform(item.platform)
+      setCurrentTitle(item.title)
+      setIsVideoOpen(true)
       return
     }
     if (item.downloadUrl) {
@@ -74,6 +83,14 @@ function PluginsPage() {
             </div>
           ))}
         </div>
+
+        <VideoModal 
+          isOpen={isVideoOpen}
+          onClose={() => setIsVideoOpen(false)}
+          videoUrl={currentVideoUrl}
+          platform={currentPlatform}
+          title={currentTitle}
+        />
       </div>
     </div>
   )

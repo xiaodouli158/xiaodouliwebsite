@@ -54,18 +54,17 @@ function VideoModal({ isOpen, onClose, videoUrl, platform, title }: VideoModalPr
 
   const buildPlayerUrl = (videoUrl: string, platform?: string): string | null => {
     if (!videoUrl) return null
-    
-    let p = platform
-    if (!p) {
-      if (videoUrl.includes('douyin.com') || videoUrl.includes('dy.com')) p = 'douyin'
-      else if (videoUrl.includes('bilibili.com')) p = 'bilibili'
-      else if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) p = 'youtube'
-      else if (videoUrl.includes('kuaishou.com')) p = 'kuaishou'
-    }
-    
-    const id = extractVideoId(videoUrl, p || 'douyin')
+
+    // 始终优先基于 URL 自动识别平台，避免传入的 platform 值不规范导致失败
+    let detected = platform
+    if (videoUrl.includes('douyin.com') || videoUrl.includes('dy.com')) detected = 'douyin'
+    else if (videoUrl.includes('bilibili.com')) detected = 'bilibili'
+    else if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) detected = 'youtube'
+    else if (videoUrl.includes('kuaishou.com')) detected = 'kuaishou'
+
+    const id = extractVideoId(videoUrl, detected || 'douyin')
     if (!id) return null
-    if (p === 'douyin') return `https://open.douyin.com/player/video?vid=${id}&autoplay=0`
+    if (detected === 'douyin') return `https://open.douyin.com/player/video?vid=${id}&autoplay=0`
     return null
   }
 
